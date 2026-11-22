@@ -1798,7 +1798,7 @@ function ArchitectureModal({
           <button onClick={onCancel} className="text-zinc-500 hover:text-white text-xs">✕</button>
         </div>
         <p className="text-xs text-zinc-400 leading-relaxed">
-          Friday&apos;s Reasoning Engine derives a minimal, evidence-backed architecture graph from this
+          WEday&apos;s Reasoning Engine derives a minimal, evidence-backed architecture graph from this
           PRD content. The result is placed on the canvas as connected nodes you can move and edit.
         </p>
         <textarea

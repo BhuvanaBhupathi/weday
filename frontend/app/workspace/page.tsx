@@ -126,7 +126,7 @@ export default function WorkspacePage() {
     return (
       <div className="h-screen w-screen bg-[#000000] flex flex-col items-center justify-center space-y-4 select-none">
         <div className="flex items-center space-x-0.5">
-          <span className="font-inconsolata font-black text-3xl tracking-tighter text-white">fri</span>
+          <span className="font-inconsolata font-black text-3xl tracking-tighter text-white">WE</span>
           <span className="w-2 h-2 rounded-full bg-[#C4B5FD] shadow-[0_0_8px_#C4B5FD] mt-1" />
         </div>
         <div className="w-5 h-5 rounded-full border-2 border-zinc-800 border-t-zinc-300 animate-spin" />
@@ -140,10 +140,10 @@ export default function WorkspacePage() {
       <div className="h-screen w-screen bg-[#000000] flex flex-col items-center justify-center p-4">
         <div className="p-8 rounded-2xl bg-[#0c0c0c] border border-zinc-800 text-center max-w-sm w-full space-y-4 shadow-2xl">
           <div className="flex items-center justify-center space-x-1 mx-auto">
-            <span className="font-inconsolata font-black text-3xl tracking-tighter text-white">fri</span>
+            <span className="font-inconsolata font-black text-3xl tracking-tighter text-white">WE</span>
             <span className="w-2 h-2 rounded-full bg-[#C4B5FD] shadow-[0_0_8px_#C4B5FD] mt-1" />
           </div>
-          <h2 className="text-xl font-bold text-white tracking-tight">Welcome to Friday</h2>
+          <h2 className="text-xl font-bold text-white tracking-tight">Welcome to WEday</h2>
           <p className="text-sm text-zinc-400">Authentication required to access the collaborative workspace.</p>
           <a
             href="/"

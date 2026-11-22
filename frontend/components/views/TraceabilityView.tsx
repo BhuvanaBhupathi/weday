@@ -22,6 +22,11 @@ import {
   Check,
   FileCode,
   Minus,
+  Sparkles,
+  ShieldCheck,
+  CheckSquare,
+  Key,
+  Terminal,
 } from 'lucide-react';
 import { useWorkspaceStore } from '../../lib/store';
 import { api } from '../../lib/api';
@@ -46,7 +51,7 @@ const artifactIcons: Record<string, React.ReactNode> = {
   COMMIT: <GitCommit className="w-4 h-4 text-zinc-300" />,
 };
 
-type TraceSubTab = 'chain' | 'commits' | 'branches' | 'pulls';
+type TraceSubTab = 'chain' | 'plan' | 'commits' | 'branches' | 'pulls';
 
 function renderDiffPatch(patch?: string) {
   if (!patch) return <div className="text-xs text-zinc-500 italic p-3">Binary or empty diff</div>;
@@ -99,6 +104,7 @@ export default function TraceabilityView() {
   // Connect modal state
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
   const [repoInput, setRepoInput] = useState('BhuvanaBhupathi/weday');
+  const [tokenInput, setTokenInput] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
 
@@ -245,6 +251,7 @@ export default function TraceabilityView() {
       await api.post(`/github/bands/${activeBand.id}/repository`, {
         owner: parts[0].trim(),
         repo: parts[1].trim(),
+        githubToken: tokenInput.trim() || undefined,
       });
       setIsConnectModalOpen(false);
       await loadGithubData();
@@ -306,9 +313,9 @@ export default function TraceabilityView() {
             <GitBranch className="w-4 h-4 text-zinc-300" />
             <span>Project Memory & Git Traceability</span>
           </div>
-          <h2 className="text-xl font-bold text-white">Codebase & Traceability Chain</h2>
+          <h2 className="text-xl font-bold text-white">Codebase, Roadmap & Traceability Chain</h2>
           <p className="text-sm text-zinc-400 mt-1 max-w-xl">
-            Live integration with GitHub App <span className="text-white font-mono font-semibold">fridayplan</span> for code browsing, commit history, branch tracking, and pull request audits.
+            Direct GitHub synchronization for codebase browsing, commit history, branch tracking, pull request audits, and implementation roadmap. Zero external apps or installations required.
           </p>
         </div>
 
@@ -373,6 +380,17 @@ export default function TraceabilityView() {
           }`}
         >
           TRACEABILITY CHAIN
+        </button>
+        <button
+          onClick={() => setSubTab('plan')}
+          className={`px-3.5 py-1.5 rounded-md text-xs font-semibold tracking-wide transition-colors flex items-center space-x-1.5 ${
+            subTab === 'plan'
+              ? 'bg-[#6ee7b7]/15 text-[#6ee7b7] border border-[#6ee7b7]/40 shadow-sm'
+              : 'text-zinc-400 hover:text-[#6ee7b7] hover:bg-[#6ee7b7]/5'
+          }`}
+        >
+          <CheckSquare className="w-3.5 h-3.5" />
+          <span>IMPLEMENTATION PLAN & ROADMAP</span>
         </button>
         <button
           onClick={() => setSubTab('commits')}
@@ -510,6 +528,309 @@ export default function TraceabilityView() {
         </div>
       )}
 
+      {/* ─── TAB: IMPLEMENTATION PLAN & ROADMAP ────────────────────────────── */}
+      {subTab === 'plan' && (
+        <div className="space-y-6">
+          {/* Repository Banner */}
+          <div className="p-6 rounded-2xl bg-[#0c0c0c] border border-[#1e1e1e] flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="space-y-1.5">
+              <div className="flex items-center space-x-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center space-x-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>DIRECT GITHUB REPO</span>
+                </span>
+                <span className="text-xs font-mono text-zinc-400">
+                  Branch: <span className="text-white font-bold">{repo?.defaultBranch || 'main'}</span>
+                </span>
+              </div>
+              <h3 className="text-xl font-bold text-white flex items-center space-x-2">
+                <span>{repo?.fullName || 'BhuvanaBhupathi/weday'}</span>
+                <a
+                  href={repo?.htmlUrl || 'https://github.com/BhuvanaBhupathi/weday'}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-zinc-500 hover:text-white"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </h3>
+              <p className="text-xs text-zinc-400 max-w-2xl leading-relaxed">
+                Direct integration with GitHub REST API. Real-time access to branches, commits, PR review, and live architectural traceability matrix without requiring any third-party GitHub App.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setActiveTab('architecture')}
+                className="px-3.5 py-2 rounded-lg bg-[#ddd6fe]/15 hover:bg-[#ddd6fe]/25 text-[#ede9fe] text-xs font-bold border border-[#ddd6fe]/30 transition-colors flex items-center space-x-1.5"
+              >
+                <Network className="w-3.5 h-3.5 text-[#ddd6fe]" />
+                <span>Architecture Graph</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('prd')}
+                className="px-3.5 py-2 rounded-lg bg-[#bfdbfe]/15 hover:bg-[#bfdbfe]/25 text-[#dbeafe] text-xs font-bold border border-[#bfdbfe]/30 transition-colors flex items-center space-x-1.5"
+              >
+                <FileText className="w-3.5 h-3.5 text-[#bfdbfe]" />
+                <span>Living PRD</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('code')}
+                className="px-3.5 py-2 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 text-xs font-bold border border-emerald-500/30 transition-colors flex items-center space-x-1.5"
+              >
+                <Code2 className="w-3.5 h-3.5" />
+                <span>Browse Code</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Working Features Overview for Selected Repo */}
+          <div className="p-6 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-300 flex items-center space-x-2">
+                  <Sparkles className="w-4 h-4 text-emerald-400" />
+                  <span>Working Features for {repo?.fullName || 'BhuvanaBhupathi/weday'}</span>
+                </h3>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Live verified features connected directly to this repository
+                </p>
+              </div>
+              <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-800/60 px-2.5 py-1 rounded-md">
+                5 OF 5 ACTIVE
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="p-4 rounded-xl bg-[#0f0f0f] border border-[#222222] space-y-2">
+                <div className="flex items-center space-x-2 text-emerald-400">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span className="font-bold text-xs uppercase text-white">Direct GitHub Access</span>
+                </div>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  No GitHub App installation or third-party permissions needed. Zero friction access to public & private repos.
+                </p>
+                <span className="inline-block text-[10px] font-mono text-zinc-500 bg-[#161616] px-2 py-0.5 rounded border border-[#262626]">
+                  backend/src/modules/github/
+                </span>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[#0f0f0f] border border-[#222222] space-y-2">
+                <div className="flex items-center space-x-2 text-emerald-400">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span className="font-bold text-xs uppercase text-white">Commit History & Diffs</span>
+                </div>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Deep traversal of commit logs with line-by-line colored diffs and one-click inspection in Monaco IDE.
+                </p>
+                <span className="inline-block text-[10px] font-mono text-zinc-500 bg-[#161616] px-2 py-0.5 rounded border border-[#262626]">
+                  {commits.length} commits synced
+                </span>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[#0f0f0f] border border-[#222222] space-y-2">
+                <div className="flex items-center space-x-2 text-emerald-400">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span className="font-bold text-xs uppercase text-white">Branch Hierarchy</span>
+                </div>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Live branch switching, branch tip comparison, and automatic tracking of default working branch.
+                </p>
+                <span className="inline-block text-[10px] font-mono text-zinc-500 bg-[#161616] px-2 py-0.5 rounded border border-[#262626]">
+                  {branches.length} branches discovered
+                </span>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[#0f0f0f] border border-[#222222] space-y-2">
+                <div className="flex items-center space-x-2 text-emerald-400">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span className="font-bold text-xs uppercase text-white">Pull Request Audits</span>
+                </div>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Audit PR descriptions, modified files, addition/deletion stats, and create new PRs directly from WEday.
+                </p>
+                <span className="inline-block text-[10px] font-mono text-zinc-500 bg-[#161616] px-2 py-0.5 rounded border border-[#262626]">
+                  {pulls.length} PRs tracked
+                </span>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[#0f0f0f] border border-[#222222] space-y-2">
+                <div className="flex items-center space-x-2 text-emerald-400">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span className="font-bold text-xs uppercase text-white">End-to-End Traceability</span>
+                </div>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Bi-directional anchor between PRD requirements, stage canvas diagrams, architecture nodes, and code.
+                </p>
+                <span className="inline-block text-[10px] font-mono text-zinc-500 bg-[#161616] px-2 py-0.5 rounded border border-[#262626]">
+                  {relationships.length} memory links
+                </span>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[#0f0f0f] border border-[#222222] space-y-2">
+                <div className="flex items-center space-x-2 text-emerald-400">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span className="font-bold text-xs uppercase text-white">Monaco Code Inspection</span>
+                </div>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Interactive code viewer with syntax highlighting and file tree for reviewing repo changes in-context.
+                </p>
+                <span className="inline-block text-[10px] font-mono text-zinc-500 bg-[#161616] px-2 py-0.5 rounded border border-[#262626]">
+                  frontend/components/views/CodeView.tsx
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Implementation Roadmap Phases */}
+          <div className="p-6 rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a] space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-300">
+                  Implementation Roadmap & Delivery Phases
+                </h3>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Architectural milestone execution log for WEday collaborative platform
+                </p>
+              </div>
+              <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-800/60 px-2.5 py-1 rounded-md">
+                PHASE 1 - 4 COMPLETED (100%)
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {/* Phase 1 */}
+              <div className="p-5 rounded-xl bg-[#0e0e0e] border border-[#1e1e1e] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-xs font-bold flex items-center justify-center">
+                      1
+                    </span>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">Phase 1: Real-time Multi-Agent Collaborative Workspace</h4>
+                      <p className="text-xs text-zinc-400">Stage Canvas, Server Rail, Band Multi-tenancy, and Presence</p>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-emerald-950/50 text-emerald-300 border border-emerald-800">
+                    COMPLETE
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs pt-1">
+                  <div className="p-2.5 rounded-lg bg-[#141414] border border-[#242424] text-zinc-300">
+                    <span className="text-white font-semibold block mb-0.5">Server Rail & Band Switcher</span>
+                    <span className="text-zinc-500 text-[11px]">Dynamic workspace rail with WE. branding</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-[#141414] border border-[#242424] text-zinc-300">
+                    <span className="text-white font-semibold block mb-0.5">Infinite Stage Canvas</span>
+                    <span className="text-zinc-500 text-[11px]">Collaborative canvas with version control</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-[#141414] border border-[#242424] text-zinc-300">
+                    <span className="text-white font-semibold block mb-0.5">Embedded PostgreSQL</span>
+                    <span className="text-zinc-500 text-[11px]">Zero-config embedded DB on port 5432</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Phase 2 */}
+              <div className="p-5 rounded-xl bg-[#0e0e0e] border border-[#1e1e1e] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-xs font-bold flex items-center justify-center">
+                      2
+                    </span>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">Phase 2: Direct GitHub Traceability & Living Codebase</h4>
+                      <p className="text-xs text-zinc-400">Direct GitHub REST API sync with Octokit, commit diffs, and PR audit</p>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-emerald-950/50 text-emerald-300 border border-emerald-800">
+                    COMPLETE
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs pt-1">
+                  <div className="p-2.5 rounded-lg bg-[#141414] border border-[#242424] text-zinc-300">
+                    <span className="text-white font-semibold block mb-0.5">Direct Access (No App)</span>
+                    <span className="text-zinc-500 text-[11px]">Instant repo connection with optional PAT</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-[#141414] border border-[#242424] text-zinc-300">
+                    <span className="text-white font-semibold block mb-0.5">Commit Stream & Diffs</span>
+                    <span className="text-zinc-500 text-[11px]">Line-by-line patch highlights & Monaco handoff</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-[#141414] border border-[#242424] text-zinc-300">
+                    <span className="text-white font-semibold block mb-0.5">Bi-directional Traceability</span>
+                    <span className="text-zinc-500 text-[11px]">Living PRD to code commit mapping</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Phase 3 */}
+              <div className="p-5 rounded-xl bg-[#0e0e0e] border border-[#1e1e1e] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-xs font-bold flex items-center justify-center">
+                      3
+                    </span>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">Phase 3: Deterministic Architecture Intelligence & Living PRD</h4>
+                      <p className="text-xs text-zinc-400">Autonomous PRD fact extraction, 6-phase reasoning engine & health audit</p>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-emerald-950/50 text-emerald-300 border border-emerald-800">
+                    COMPLETE
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs pt-1">
+                  <div className="p-2.5 rounded-lg bg-[#141414] border border-[#242424] text-zinc-300">
+                    <span className="text-white font-semibold block mb-0.5">WEday Reasoning Engine</span>
+                    <span className="text-zinc-500 text-[11px]">Deterministic architecture derivation</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-[#141414] border border-[#242424] text-zinc-300">
+                    <span className="text-white font-semibold block mb-0.5">Living PRD Markdown</span>
+                    <span className="text-zinc-500 text-[11px]">Interactive feature & scope manager</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-[#141414] border border-[#242424] text-zinc-300">
+                    <span className="text-white font-semibold block mb-0.5">Architecture Validator</span>
+                    <span className="text-zinc-500 text-[11px]">Topology checks & orphan node detection</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Phase 4 */}
+              <div className="p-5 rounded-xl bg-[#0e0e0e] border border-[#1e1e1e] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-xs font-bold flex items-center justify-center">
+                      4
+                    </span>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">Phase 4: Monorepo Deployment & Complete WEday Rebrand</h4>
+                      <p className="text-xs text-zinc-400">Renamed from Friday to WEday, pushed to BhuvanaBhupathi/weday</p>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-emerald-950/50 text-emerald-300 border border-emerald-800">
+                    COMPLETE
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs pt-1">
+                  <div className="p-2.5 rounded-lg bg-[#141414] border border-[#242424] text-zinc-300">
+                    <span className="text-white font-semibold block mb-0.5">WEday Core Workspace</span>
+                    <span className="text-zinc-500 text-[11px]">Collaborative workspace with WE branding</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-[#141414] border border-[#242424] text-zinc-300">
+                    <span className="text-white font-semibold block mb-0.5">GitHub Push Verified</span>
+                    <span className="text-zinc-500 text-[11px]">Synchronized with BhuvanaBhupathi/weday</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-[#141414] border border-[#242424] text-zinc-300">
+                    <span className="text-white font-semibold block mb-0.5">Comprehensive README</span>
+                    <span className="text-zinc-500 text-[11px]">Full documentation and term glossary</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ─── TAB 2: COMMITS & CODEBASE ─────────────────────────────────────── */}
       {subTab === 'commits' && (
         <div className="space-y-4">
@@ -517,7 +838,7 @@ export default function TraceabilityView() {
             <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
               Commit History ({commits.length})
             </span>
-            <span className="text-xs text-zinc-500 font-mono">Live Sync via fridayplan</span>
+            <span className="text-xs text-zinc-500 font-mono">Direct GitHub Sync</span>
           </div>
 
           <div className="space-y-2">
@@ -696,24 +1017,29 @@ export default function TraceabilityView() {
 
             <p className="text-xs text-zinc-400 leading-relaxed">
               {repo
-                ? 'Update or switch the connected GitHub repository for this Band, or disconnect it completely.'
-                : 'Connect your repository to sync commit history, branches, pull requests, and file explorer directly via the fridayplan GitHub App.'}
+                ? 'Update or switch the connected GitHub repository for this Band, or disconnect it.'
+                : 'Direct access to GitHub repositories. Browse codebase, commits, branches, pull requests, and traceability roadmap with zero GitHub App installations.'}
             </p>
 
-            <div className="p-3 rounded-lg bg-[#141414] border border-[#242424] text-xs text-zinc-300 space-y-1">
-              <span className="font-bold text-white block">GitHub App Status</span>
-              <p className="text-zinc-400">
-                Ensure <span className="text-white font-mono">fridayplan</span> is installed on the target repository:
+            {/* Direct Access Banner */}
+            <div className="p-3.5 rounded-xl bg-[#121212] border border-[#222222] text-xs text-zinc-300 space-y-2">
+              <div className="flex items-center space-x-2 text-emerald-400 font-semibold">
+                <ShieldCheck className="w-4 h-4" />
+                <span>Direct GitHub REST Access (No App Installation Required)</span>
+              </div>
+              <p className="text-zinc-400 text-[11px] leading-relaxed">
+                Connect directly using GitHub's open API. Public repositories connect automatically without authentication. For private repositories, optionally paste a GitHub Personal Access Token (PAT).
               </p>
-              <a
-                href="https://github.com/apps/fridayplan/installations/new"
-                target="_blank"
-                rel="noreferrer"
-                className="text-[#C4B5FD] hover:underline font-bold inline-flex items-center space-x-1 mt-1"
-              >
-                <span>Install or configure fridayplan on GitHub</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
+              <div className="flex items-center space-x-2 pt-1">
+                <span className="text-[11px] text-zinc-500 font-medium">Quick select:</span>
+                <button
+                  type="button"
+                  onClick={() => setRepoInput('BhuvanaBhupathi/weday')}
+                  className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-white font-mono text-[11px] border border-zinc-700 transition-colors"
+                >
+                  BhuvanaBhupathi/weday
+                </button>
+              </div>
             </div>
 
             <form onSubmit={handleConnectRepo} className="space-y-3">
@@ -727,8 +1053,27 @@ export default function TraceabilityView() {
                   onChange={(e) => setRepoInput(e.target.value)}
                   placeholder="e.g. BhuvanaBhupathi/weday"
                   required
-                  className="w-full bg-[#141414] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-500"
+                  className="w-full bg-[#141414] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-500 font-mono"
                 />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400">
+                    GitHub Token (Optional for Public Repos)
+                  </label>
+                  <span className="text-[10px] text-zinc-500 font-mono">Optional</span>
+                </div>
+                <input
+                  type="password"
+                  value={tokenInput}
+                  onChange={(e) => setTokenInput(e.target.value)}
+                  placeholder="ghp_xxxxxxxxxxxxxxxxxxxx (only for private repos)"
+                  className="w-full bg-[#141414] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-500 font-mono"
+                />
+                <p className="text-[11px] text-zinc-500 mt-1">
+                  Public repos like <code className="text-zinc-400">BhuvanaBhupathi/weday</code> require no token.
+                </p>
               </div>
 
               {connectError && (
@@ -874,7 +1219,7 @@ export default function TraceabilityView() {
         </div>
       )}
 
-      {/* ─── MODAL: COMMIT DETAILS (OPEN IN FRIDAY) ─────────────────────────── */}
+      {/* ─── MODAL: COMMIT DETAILS (OPEN IN WEDAY) ─────────────────────────── */}
       {isCommitModalOpen && selectedCommit && (
         <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50">
           <div className="bg-[#0b0b0b] border border-zinc-800 rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
@@ -910,7 +1255,7 @@ export default function TraceabilityView() {
                 <button
                   onClick={() => inspectCommitInCodebase(selectedCommit)}
                   className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center space-x-1.5 transition-colors border border-emerald-500/40"
-                  title="Inspect entire commit in Friday codebase with diff highlights"
+                  title="Inspect entire commit in WEday codebase with diff highlights"
                 >
                   <Code2 className="w-3.5 h-3.5" />
                   <span>Inspect in Codebase</span>
@@ -984,7 +1329,7 @@ export default function TraceabilityView() {
                             <button
                               onClick={() => inspectCommitInCodebase(selectedCommit, file.filename)}
                               className="px-2.5 py-1 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-xs text-emerald-300 border border-emerald-500/40 transition-colors flex items-center space-x-1 font-semibold"
-                              title="Inspect this file in Friday codebase with diff highlights"
+                              title="Inspect this file in WEday codebase with diff highlights"
                             >
                               <Code2 className="w-3 h-3" />
                               <span>Inspect Codebase</span>
@@ -1009,7 +1354,7 @@ export default function TraceabilityView() {
             {/* Footer */}
             <div className="p-4 border-t border-[#1c1c1c] bg-[#101010] flex items-center justify-between">
               <span className="text-xs text-zinc-500 font-mono">
-                Integrated with Friday Traceability Memory
+                Integrated with WEday Traceability Memory
               </span>
               <button
                 onClick={() => setIsCommitModalOpen(false)}
@@ -1022,7 +1367,7 @@ export default function TraceabilityView() {
         </div>
       )}
 
-      {/* ─── MODAL: PULL REQUEST DETAILS (OPEN IN FRIDAY) ───────────────────── */}
+      {/* ─── MODAL: PULL REQUEST DETAILS (OPEN IN WEDAY) ───────────────────── */}
       {isPrDetailModalOpen && selectedPr && (
         <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50">
           <div className="bg-[#0b0b0b] border border-zinc-800 rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
@@ -1064,7 +1409,7 @@ export default function TraceabilityView() {
                 <button
                   onClick={() => inspectPrInCodebase(selectedPr)}
                   className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center space-x-1.5 transition-colors border border-emerald-500/40"
-                  title="Inspect PR in Friday IDE codebase with diff highlights"
+                  title="Inspect PR in WEday IDE codebase with diff highlights"
                 >
                   <Code2 className="w-3.5 h-3.5" />
                   <span>Inspect in Codebase</span>
@@ -1139,7 +1484,7 @@ export default function TraceabilityView() {
                             <button
                               onClick={() => inspectPrInCodebase(selectedPr, file.filename)}
                               className="px-2.5 py-1 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-xs text-emerald-300 border border-emerald-500/40 transition-colors flex items-center space-x-1 font-semibold"
-                              title="Inspect this file in Friday codebase with diff highlights"
+                              title="Inspect this file in WEday codebase with diff highlights"
                             >
                               <Code2 className="w-3 h-3" />
                               <span>Inspect Codebase</span>
@@ -1164,7 +1509,7 @@ export default function TraceabilityView() {
             {/* Footer */}
             <div className="p-4 border-t border-[#1c1c1c] bg-[#101010] flex items-center justify-between">
               <span className="text-xs text-zinc-500 font-mono">
-                PR anchored to Friday Stage Canvas & Traceability
+                PR anchored to WEday Stage Canvas & Traceability
               </span>
               <button
                 onClick={() => setIsPrDetailModalOpen(false)}

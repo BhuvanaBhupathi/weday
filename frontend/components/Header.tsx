@@ -54,7 +54,7 @@ export default function Header() {
       {/* Left: Brand & Band Selector */}
       <div className="flex items-center space-x-4">
         <div className="flex items-center space-x-0.5 cursor-pointer">
-          <span className="font-inconsolata font-black text-2xl tracking-tighter text-white">fri</span>
+          <span className="font-inconsolata font-black text-2xl tracking-tighter text-white">WE</span>
           <span className="w-1.5 h-1.5 rounded-full bg-[#C4B5FD] shadow-[0_0_8px_#C4B5FD] mt-0.5" />
         </div>
 
@@ -106,7 +106,7 @@ export default function Header() {
               ? 'bg-emerald-950/40 text-emerald-300 border-emerald-800/50'
               : 'bg-slate-900 text-slate-400 border-slate-800'
           }`}
-          title={isConnected ? 'Realtime Connected to Friday Event Gateway' : 'Connecting to Event Gateway...'}
+          title={isConnected ? 'Realtime Connected to WEday Event Gateway' : 'Connecting to Event Gateway...'}
         >
           <span
             className={`w-1.5 h-1.5 rounded-full ${

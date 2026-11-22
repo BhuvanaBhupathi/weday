@@ -140,7 +140,7 @@ export default function ServerRail() {
             }`}
           >
             <div className="flex items-center space-x-0.5">
-              <span className="font-inconsolata font-black text-2xl tracking-tighter text-white">fri</span>
+              <span className="font-inconsolata font-black text-2xl tracking-tighter text-white">WE</span>
               <span className="w-1.5 h-1.5 rounded-full bg-[#C4B5FD] shadow-[0_0_8px_#C4B5FD] mt-1" />
             </div>
           </button>
@@ -196,7 +196,7 @@ export default function ServerRail() {
                     <p className="font-bold text-white">{b.name}</p>
                     <p className="text-xs text-neutral-400 font-mono font-normal">Join Code: {b.joinCode}</p>
                   </div>
-                  {b.slug !== 'friday-core' && b.name.toLowerCase() !== 'friday core' && (
+                  {b.slug !== 'friday-core' && b.slug !== 'weday-core' && b.name.toLowerCase() !== 'friday core' && b.name.toLowerCase() !== 'weday core' && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

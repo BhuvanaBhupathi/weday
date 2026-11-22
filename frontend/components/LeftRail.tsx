@@ -358,7 +358,7 @@ export default function LeftRail() {
           <div className="glass-panel w-full max-w-sm p-6 rounded-xl border border-slate-700 shadow-2xl">
             <h3 className="text-base font-bold text-white mb-1">Add Crew Peer</h3>
             <p className="text-xs text-slate-400 mb-4">
-              Connect directly with other developers in Friday for peer DMs and joint projects.
+              Connect directly with other developers in WEday for peer DMs and joint projects.
             </p>
 
             {error && (
@@ -373,7 +373,7 @@ export default function LeftRail() {
                   type="text"
                   value={crewUsernameInput}
                   onChange={(e) => setCrewUsernameInput(e.target.value)}
-                  placeholder="Enter Friday username"
+                  placeholder="Enter WEday username"
                   className="w-full bg-[#080c14] border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
                   required
                 />

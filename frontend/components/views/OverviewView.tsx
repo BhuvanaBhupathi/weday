@@ -52,7 +52,7 @@ export default function OverviewView() {
               <span>Project-Centric Workspace</span>
             </div>
             <h1 className="text-2xl font-bold text-white tracking-tight">
-              {activeBand ? activeBand.name : 'Welcome to Friday'}
+              {activeBand ? activeBand.name : 'Welcome to WEday'}
             </h1>
             <p className="text-sm text-zinc-400 max-w-xl mt-1 leading-relaxed">
               {activeBand?.description ||

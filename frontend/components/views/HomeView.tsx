@@ -469,7 +469,7 @@ export default function HomeView() {
                 <div className="max-w-md space-y-4">
                   <h3 className="text-sm font-bold text-white uppercase tracking-wider">Add Crewmates</h3>
                   <p className="text-sm text-neutral-400 leading-relaxed">
-                    Connect with other developers in Friday to direct message, collaborate on PRDs, and co-design architecture.
+                    Connect with other developers in WEday to direct message, collaborate on PRDs, and co-design architecture.
                   </p>
 
                   <form onSubmit={handleAddFriendSubmit} className="space-y-3">
@@ -478,7 +478,7 @@ export default function HomeView() {
                         type="text"
                         value={addFriendInput}
                         onChange={(e) => setAddFriendInput(e.target.value)}
-                        placeholder="Enter Friday username..."
+                        placeholder="Enter WEday username..."
                         className="w-full bg-[#121212] border border-[#262626] rounded-xl px-4 py-2.5 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-400"
                         required
                       />

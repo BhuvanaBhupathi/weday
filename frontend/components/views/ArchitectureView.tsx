@@ -404,7 +404,7 @@ function ArchitectureCanvas() {
     }
   }
 
-  // Generate directly from PRD using Friday's Reasoning Engine
+  // Generate directly from PRD using WEday's Reasoning Engine
   async function handleGenerateFromPrd() {
     if (!activeBand) return;
     setIsGenerating(true);
@@ -1113,7 +1113,7 @@ function ArchitectureCanvas() {
             onClick={handleGenerateFromPrd}
             disabled={isGenerating}
             className="px-3 py-1.5 rounded-md bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 border border-emerald-500/40 text-xs font-semibold flex items-center space-x-1.5 transition-all disabled:opacity-50"
-            title="Derive minimal architecture from PRD facts using Friday Reasoning Engine"
+            title="Derive minimal architecture from PRD facts using WEday Reasoning Engine"
           >
             <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
             <span>{isGenerating ? 'Reasoning...' : 'Reason from PRD'}</span>

@@ -93,7 +93,10 @@ export default function IdeFileTree({ width }: IdeFileTreeProps) {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const isProtectedBand =
-    activeBand?.slug === 'friday-core' || activeBand?.name?.toLowerCase() === 'friday core';
+    activeBand?.slug === 'friday-core' ||
+    activeBand?.slug === 'weday-core' ||
+    activeBand?.name?.toLowerCase() === 'friday core' ||
+    activeBand?.name?.toLowerCase() === 'weday core';
 
   async function handleDeleteBand() {
     if (!activeBand || isProtectedBand) return;

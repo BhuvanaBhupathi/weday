@@ -261,7 +261,7 @@ export default function PrdView() {
   const [mapEdges, setMapEdges] = useState<Edge[]>([]);
 
   useEffect(() => {
-    const isFridayCore = activeBand?.slug === 'friday-core' || activeBand?.name === 'Friday Core';
+    const isFridayCore = activeBand?.slug === 'friday-core' || activeBand?.slug === 'weday-core' || activeBand?.name === 'Friday Core' || activeBand?.name === 'WEday Core';
 
     if (isFridayCore) {
       const nodes: Node[] = [

@@ -1,17 +1,25 @@
 const { default: EmbeddedPostgres } = require('embedded-postgres');
 const path = require('path');
+const fs = require('fs');
 
 async function main() {
+  const databaseDir = path.join(__dirname, '..', '.db_data');
   const pg = new EmbeddedPostgres({
-    databaseDir: path.join(__dirname, '..', '.db_data'),
+    databaseDir,
     port: 5432,
     user: 'friday',
     password: 'friday_dev_password',
     authMethod: 'trust',
   });
 
-  console.log('Initializing embedded PostgreSQL...');
-  await pg.initialise();
+  const isInitialized = fs.existsSync(path.join(databaseDir, 'PG_VERSION'));
+  if (!isInitialized) {
+    console.log('Initializing embedded PostgreSQL...');
+    await pg.initialise();
+  } else {
+    console.log('Database already initialized. Skipping initdb.');
+  }
+
   console.log('Starting PostgreSQL on port 5432...');
   await pg.start();
   console.log('PostgreSQL started on port 5432!');

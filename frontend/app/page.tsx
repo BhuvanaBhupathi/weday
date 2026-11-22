@@ -35,7 +35,7 @@ export default function LandingPage() {
   const [user, setUser] = useState<any | null>(null);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isDevLoginOpen, setIsDevLoginOpen] = useState(false);
-  const [devUsername, setDevUsername] = useState('friday-admin');
+  const [devUsername, setDevUsername] = useState('weday-admin');
   const [loggingIn, setLoggingIn] = useState(false);
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export default function LandingPage() {
   }, [wordIndex]);
 
   useEffect(() => {
-    const saved = localStorage.getItem('friday-theme') as 'dark' | 'light' | null;
+    const saved = localStorage.getItem('weday-theme') as 'dark' | 'light' | null;
     if (saved === 'light' || saved === 'dark') {
       setTheme(saved);
       document.documentElement.setAttribute('data-theme', saved);
@@ -61,7 +61,7 @@ export default function LandingPage() {
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
-    localStorage.setItem('friday-theme', next);
+    localStorage.setItem('weday-theme', next);
     document.documentElement.setAttribute('data-theme', next);
   };
 

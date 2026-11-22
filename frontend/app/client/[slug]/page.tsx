@@ -165,7 +165,7 @@ export default function ClientPortalPage() {
       <header className="h-16 border-b border-[#1e293b] bg-[#0c1424]/90 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-0.5 cursor-pointer">
-            <span className="font-inconsolata font-black text-2xl tracking-tighter text-white">fri</span>
+            <span className="font-inconsolata font-black text-2xl tracking-tighter text-white">WE</span>
             <span className="w-1.5 h-1.5 rounded-full bg-[#C4B5FD] shadow-[0_0_8px_#C4B5FD] mt-0.5" />
           </div>
           <div className="h-6 w-[1px] bg-slate-800" />

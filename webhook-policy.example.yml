@@ -1,0 +1,17 @@
+# ngrok Traffic Policy for GitHub Webhooks
+# Documentation: https://ngrok.com/docs/gateway/traffic-policy/actions/verify-webhook/
+#
+# To use:
+# 1. Copy this file: cp webhook-policy.example.yml webhook-policy.yml
+# 2. Replace <YOUR_GITHUB_WEBHOOK_SECRET> with your secret string.
+# 3. Use the same secret in GitHub Webhook settings and backend/.env (GITHUB_WEBHOOK_SECRET).
+# 4. Start ngrok: ngrok http 4000 --traffic-policy-file webhook-policy.yml
+
+on_http_request:
+  - expressions:
+      - "req.url.path.startsWith('/api/github/webhooks')"
+    actions:
+      - type: verify-webhook
+        config:
+          provider: github
+          secret: "poulami@S11"

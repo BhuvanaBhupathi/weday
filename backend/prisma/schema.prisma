@@ -1,0 +1,1287 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Friday — Prisma Schema
+// PostgreSQL Database Schema
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Users & Crew ─────────────────────────────────────────────────────────────
+
+model User {
+  id          String   @id @default(cuid())
+  githubId    String   @unique @map("github_id")
+  username    String   @unique
+  displayName String   @map("display_name")
+  avatarUrl   String?  @map("avatar_url")
+  email       String?  @unique
+  bio         String?
+  githubToken String?  @map("github_token") // stored encrypted, for OAuth user access
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  createdBands                Band[]                @relation("BandCreator")
+  bandMemberships             BandMembership[]
+  crewSent                    CrewRelationship[]    @relation("CrewRequester")
+  crewReceived                CrewRelationship[]    @relation("CrewAddressee")
+  prdVersionsCreated          PRDVersion[]
+  stagesCreated               Stage[]               @relation("StageCreator")
+  architectureVersionsCreated ArchitectureVersion[]
+  discussions                 Discussion[]          @relation("DiscussionAuthor")
+  discussionReplies           DiscussionReply[]
+  concerns                    Concern[]             @relation("ConcernReporter")
+  concernsAssigned            Concern[]             @relation("ConcernAssignee")
+  suggestedEdits              SuggestedEdit[]       @relation("SuggestedEditAuthor")
+  tasksCreated                Task[]                @relation("TaskCreator")
+  tasksAssigned               Task[]                @relation("TaskAssignee")
+  notifications               Notification[]
+  activities                  Activity[]
+  canvasVersionsCreated       CanvasVersion[]       @relation("CanvasVersionCreator")
+  sentDirectMessages          DirectMessage[]       @relation("DMSender")
+  receivedDirectMessages      DirectMessage[]       @relation("DMReceiver")
+  chatMessages                ChatMessage[]
+  codeOwnerships              CodeOwnership[]
+  pullRequestsAuthored        PullRequest[]
+
+  // Planning domain relationships
+  requirementsCreated    Requirement[]              @relation("RequirementCreator")
+  decisionsCreated       Decision[]                 @relation("DecisionDecider")
+  questionsAuthored      Question[]                 @relation("QuestionAuthor")
+  assumptionsAuthored    Assumption[]               @relation("AssumptionAuthor")
+  changeRequestsAuthored ChangeRequest[]            @relation("CRAuthor")
+  changeRequestsReviewed ChangeRequest[]            @relation("CRReviewer")
+  publicationsCreated    ClientPublicationVersion[] @relation("PublicationAuthor")
+
+  @@map("users")
+}
+
+model CrewRelationship {
+  id          String     @id @default(cuid())
+  requesterId String     @map("requester_id")
+  addresseeId String     @map("addressee_id")
+  status      CrewStatus @default(PENDING)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  requester User @relation("CrewRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("CrewAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([requesterId])
+  @@index([addresseeId])
+  @@map("crew_relationships")
+}
+
+// ─── Bands ────────────────────────────────────────────────────────────────────
+
+model Band {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  iconUrl     String?  @map("icon_url")
+  joinCode    String   @unique @map("join_code")
+  creatorId   String   @map("creator_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  creator        User             @relation("BandCreator", fields: [creatorId], references: [id])
+  memberships    BandMembership[]
+  gitRepository  GitRepository?
+  prd            PRD?
+  stage          Stage?
+  architecture   Architecture?
+  discussions    Discussion[]
+  concerns       Concern[]
+  tasks          Task[]
+  chatChannels   ChatChannel[]
+  activities     Activity[]
+  notifications  Notification[]
+  suggestedEdits SuggestedEdit[]
+  codeOwnerships CodeOwnership[]
+
+  // Planning domain entities
+  requirements      Requirement[]
+  decisions         Decision[]
+  questions         Question[]
+  assumptions       Assumption[]
+  changeRequests    ChangeRequest[]
+  milestones        Milestone[]
+  clientPublication ClientPublication?
+  architectureBoards ArchitectureBoard[]
+
+  // Canvas (product planning workspace)
+  canvasPages    CanvasPage[]    @relation("CanvasPages")
+  canvasNodes    CanvasNode[]    @relation("CanvasNodes")
+  canvasEdges    CanvasEdge[]    @relation("CanvasEdges")
+  canvasVersions CanvasVersion[] @relation("CanvasVersions")
+
+  @@map("bands")
+}
+
+model BandMembership {
+  id        String         @id @default(cuid())
+  userId    String         @map("user_id")
+  bandId    String         @map("band_id")
+  role      BandMemberRole @default(MEMBER)
+  signatureColor String?   @map("signature_color") // Stable band-scoped identity color (PRD §16)
+  joinedAt  DateTime       @default(now()) @map("joined_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  band Band @relation(fields: [bandId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bandId])
+  @@index([bandId])
+  @@index([userId])
+  @@map("band_memberships")
+}
+
+// ─── GitHub / Git ─────────────────────────────────────────────────────────────
+
+model GitRepository {
+  id             String    @id @default(cuid())
+  bandId         String    @unique @map("band_id") // One Band → One repository
+  githubRepoId   Int       @unique @map("github_repo_id")
+  owner          String
+  name           String
+  fullName       String    @map("full_name")
+  defaultBranch  String    @default("main") @map("default_branch")
+  isPrivate      Boolean   @default(true) @map("is_private")
+  htmlUrl        String    @map("html_url")
+  installationId Int?      @map("installation_id") // GitHub App installation
+  webhookSecret  String?   @map("webhook_secret")
+  syncedAt       DateTime? @map("synced_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  band         Band          @relation(fields: [bandId], references: [id], onDelete: Cascade)
+  branches     GitBranch[]
+  commits      GitCommit[]
+  pullRequests PullRequest[]
+  discussions  Discussion[]
+
+  @@map("git_repositories")
+}
+
+model GitBranch {
+  id          String   @id @default(cuid())
+  repoId      String   @map("repo_id")
+  name        String
+  sha         String
+  isDefault   Boolean  @default(false) @map("is_default")
+  isProtected Boolean  @default(false) @map("is_protected")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  repository GitRepository @relation(fields: [repoId], references: [id], onDelete: Cascade)
+
+  @@unique([repoId, name])
+  @@index([repoId])
+  @@map("git_branches")
+}
+
+model GitCommit {
+  id             String    @id @default(cuid())
+  repoId         String    @map("repo_id")
+  sha            String    @unique
+  message        String
+  authorName     String    @map("author_name")
+  authorEmail    String    @map("author_email")
+  authorGithubId String?   @map("author_github_id")
+  branchName     String?   @map("branch_name")
+  parentShas     String[]  @map("parent_shas")
+  committedAt    DateTime  @map("committed_at")
+  pushedAt       DateTime? @map("pushed_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  repository   GitRepository @relation(fields: [repoId], references: [id], onDelete: Cascade)
+  pullRequests PullRequest[] @relation("PRCommits")
+
+  @@index([repoId])
+  @@index([sha])
+  @@map("git_commits")
+}
+
+model PullRequest {
+  id              String           @id @default(cuid())
+  repoId          String           @map("repo_id")
+  githubPrId      Int              @map("github_pr_id")
+  githubPrNumber  Int              @map("github_pr_number")
+  title           String
+  body            String?
+  state           PullRequestState @default(OPEN)
+  headBranch      String           @map("head_branch")
+  baseBranch      String           @map("base_branch")
+  headSha         String           @map("head_sha")
+  authorId        String?          @map("author_id")
+  isDraft         Boolean          @default(false) @map("is_draft")
+  mergedAt        DateTime?        @map("merged_at")
+  closedAt        DateTime?        @map("closed_at")
+  htmlUrl         String           @map("html_url")
+  githubCreatedAt DateTime         @map("github_created_at")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  repository GitRepository @relation(fields: [repoId], references: [id], onDelete: Cascade)
+  author     User?         @relation(fields: [authorId], references: [id])
+  commits    GitCommit[]   @relation("PRCommits")
+
+  @@unique([repoId, githubPrId])
+  @@index([repoId])
+  @@map("pull_requests")
+}
+
+// ─── PRD ──────────────────────────────────────────────────────────────────────
+
+model PRD {
+  id               String   @id @default(cuid())
+  bandId           String   @unique @map("band_id")
+  title            String   @default("Product Requirements Document")
+  currentVersionId String?  @map("current_version_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  band         Band          @relation(fields: [bandId], references: [id], onDelete: Cascade)
+  versions     PRDVersion[]
+  aiAnalyses   AiJob[]       @relation("PRDAiJobs")
+  requirements Requirement[]
+
+  @@map("prds")
+}
+
+model PRDVersion {
+  id              String   @id @default(cuid())
+  prdId           String   @map("prd_id")
+  versionNumber   Int      @map("version_number")
+  title           String
+  content         String // Markdown content
+  uploadedFileUrl String?  @map("uploaded_file_url") // S3 URL for uploaded PDFs
+  changeSummary   String?  @map("change_summary")
+  createdById     String   @map("created_by_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  prd       PRD  @relation(fields: [prdId], references: [id], onDelete: Cascade)
+  createdBy User @relation(fields: [createdById], references: [id])
+
+  @@unique([prdId, versionNumber])
+  @@index([prdId])
+  @@map("prd_versions")
+}
+
+// ─── Stage ────────────────────────────────────────────────────────────────────
+
+model Stage {
+  id        String   @id @default(cuid())
+  bandId    String   @unique @map("band_id")
+  creatorId String   @map("creator_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  band    Band         @relation(fields: [bandId], references: [id], onDelete: Cascade)
+  creator User         @relation("StageCreator", fields: [creatorId], references: [id])
+  boards  StageBoard[]
+
+  @@map("stages")
+}
+
+model StageBoard {
+  id           String   @id @default(cuid())
+  stageId      String   @map("stage_id")
+  name         String
+  slug         String
+  description  String?
+  tlDrawData   Json?    @map("tldraw_data") // tldraw canvas JSON
+  thumbnailUrl String?  @map("thumbnail_url")
+  order        Int      @default(0)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  stage Stage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  @@unique([stageId, slug])
+  @@index([stageId])
+  @@map("stage_boards")
+}
+
+// ─── Canvas (product planning workspace) ─────────────────────────────────────
+
+// A named infinite-canvas space inside a Band (e.g. "Overview", "Dashboard").
+// Pages form an optional hierarchy via parentPageId for node-to-page navigation.
+model CanvasPage {
+  id           String   @id @default(cuid())
+  bandId       String   @map("band_id")
+  name         String
+  slug         String
+  description  String?
+  parentPageId String?  @map("parent_page_id")
+  order        Int      @default(0)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  band     Band         @relation("CanvasPages", fields: [bandId], references: [id], onDelete: Cascade)
+  parent   CanvasPage?  @relation("CanvasPageHierarchy", fields: [parentPageId], references: [id], onDelete: SetNull)
+  children CanvasPage[] @relation("CanvasPageHierarchy")
+  nodes    CanvasNode[]
+  edges    CanvasEdge[]
+  draft    CanvasDraft?
+
+  @@unique([bandId, slug])
+  @@index([bandId])
+  @@index([parentPageId])
+  @@map("canvas_pages")
+}
+
+// A canvas object (node). The normalized current (draft) state of the canvas.
+// ids are client-generated and stable so versions and diffs can track objects.
+model CanvasNode {
+  id        String   @id @default(cuid())
+  bandId    String   @map("band_id")
+  pageId    String   @map("page_id")
+  type      String // TEXT | CHECKLIST | PRD | GEMINI | IMAGE | PAGE_LINK | FLOW | ARCHITECTURE
+  title     String   @default("")
+  x         Float
+  y         Float
+  width     Float    @default(280)
+  height    Float    @default(160)
+  rotation  Float    @default(0)
+  zIndex    Int      @default(0)
+  data      Json     @default("{}")
+  sourceRef Json?    @map("source_ref") // e.g. { type: "prd", id: "..." } — where this node was derived from
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  band Band       @relation("CanvasNodes", fields: [bandId], references: [id], onDelete: Cascade)
+  page CanvasPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@index([bandId])
+  @@map("canvas_nodes")
+}
+
+// A persistent connection between two canvas nodes.
+model CanvasEdge {
+  id        String   @id @default(cuid())
+  bandId    String   @map("band_id")
+  pageId    String   @map("page_id")
+  source    String
+  target    String
+  label     String?
+  relation  String? // depends_on | leads_to | implements | references | contains
+  data      Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  band Band       @relation("CanvasEdges", fields: [bandId], references: [id], onDelete: Cascade)
+  page CanvasPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@index([bandId])
+  @@map("canvas_edges")
+}
+
+// Per-page draft envelope: viewport + revision for autosave reconciliation.
+// Node/edge content itself lives in CanvasNode/CanvasEdge (no duplication).
+model CanvasDraft {
+  id        String   @id @default(cuid())
+  bandId    String   @map("band_id")
+  pageId    String   @unique @map("page_id")
+  viewport  Json? // { x, y, zoom }
+  revision  Int      @default(0)
+  savedAt   DateTime @default(now()) @map("saved_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  page CanvasPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([bandId])
+  @@map("canvas_drafts")
+}
+
+// Immutable historical snapshot of the Band's planning state.
+// snapshot = { pages, nodes, edges, metadata } — reconstructable as an editable canvas.
+// Versions form a tree (parentVersionId) to allow branching; UI may emphasize linear history.
+model CanvasVersion {
+  id              String   @id @default(cuid())
+  bandId          String   @map("band_id")
+  versionNumber   Int      @map("version_number")
+  name            String
+  description     String?
+  createdBy       String   @map("created_by_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  parentVersionId String?  @map("parent_version_id")
+  snapshot        Json // { pages: [...], nodes: [...], edges: [...], metadata: {...} }
+  changeSummary   String?  @map("change_summary")
+  isCurrent       Boolean  @default(false) @map("is_current")
+  gitBranch       String?  @map("git_branch")
+  gitCommitSha    String?  @map("git_commit_sha")
+
+  band    Band              @relation("CanvasVersions", fields: [bandId], references: [id], onDelete: Cascade)
+  creator User              @relation("CanvasVersionCreator", fields: [createdBy], references: [id])
+  parentVersion CanvasVersion?  @relation("CanvasVersionTree", fields: [parentVersionId], references: [id], onDelete: SetNull)
+  childVersions CanvasVersion[] @relation("CanvasVersionTree")
+  changes VersionChange[]
+
+  @@unique([bandId, versionNumber])
+  @@index([bandId, createdAt(sort: Desc)])
+  @@index([parentVersionId])
+  @@map("canvas_versions")
+}
+
+// One row per meaningful change between a version and its parent (drives the diff UI).
+model VersionChange {
+  id          String   @id @default(cuid())
+  versionId   String   @map("version_id")
+  changeType  String   @map("change_type") // ADDED | REMOVED | MODIFIED | MOVED
+  targetType  String   @map("target_type") // NODE | EDGE | PAGE
+  targetId    String   @map("target_id")
+  targetLabel String   @map("target_label")
+  detail      Json? // e.g. { field: "title", from, to } or { fromX, fromY, toX, toY }
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  version CanvasVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@index([versionId])
+  @@map("version_changes")
+}
+
+// ─── Architecture ─────────────────────────────────────────────────────────────
+
+model Architecture {
+  id               String    @id @default(cuid())
+  bandId           String    @unique @map("band_id")
+  currentVersionId String?   @map("current_version_id")
+  isApproved       Boolean   @default(false) @map("is_approved")
+  approvedAt       DateTime? @map("approved_at")
+  approvedById     String?   @map("approved_by_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  band     Band                  @relation(fields: [bandId], references: [id], onDelete: Cascade)
+  versions ArchitectureVersion[]
+  aiJobs   AiJob[]               @relation("ArchitectureAiJobs")
+
+  @@map("architectures")
+}
+
+model ArchitectureVersion {
+  id             String   @id @default(cuid())
+  architectureId String   @map("architecture_id")
+  versionNumber  Int      @map("version_number")
+  changeSummary  String?  @map("change_summary")
+  isAiGenerated  Boolean  @default(false) @map("is_ai_generated")
+  createdById    String   @map("created_by_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  architecture Architecture       @relation(fields: [architectureId], references: [id], onDelete: Cascade)
+  createdBy    User               @relation(fields: [createdById], references: [id])
+  nodes        ArchitectureNode[]
+  edges        ArchitectureEdge[]
+
+  @@unique([architectureId, versionNumber])
+  @@index([architectureId])
+  @@map("architecture_versions")
+}
+
+model ArchitectureNode {
+  id                    String   @id @default(cuid())
+  architectureVersionId String   @map("architecture_version_id")
+  nodeId                String   @map("node_id") // React Flow node id
+  label                 String
+  type                  String   @default("default")
+  description           String?
+  technology            String?
+  positionX             Float    @map("position_x")
+  positionY             Float    @map("position_y")
+  data                  Json? // Additional React Flow node data
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  version ArchitectureVersion @relation(fields: [architectureVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([architectureVersionId, nodeId])
+  @@index([architectureVersionId])
+  @@map("architecture_nodes")
+}
+
+model ArchitectureEdge {
+  id                    String   @id @default(cuid())
+  architectureVersionId String   @map("architecture_version_id")
+  edgeId                String   @map("edge_id") // React Flow edge id
+  source                String
+  target                String
+  label                 String?
+  relationshipType      String?  @map("relationship_type")
+  animated              Boolean  @default(false)
+  data                  Json?
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  version ArchitectureVersion @relation(fields: [architectureVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([architectureVersionId, edgeId])
+  @@index([architectureVersionId])
+  @@map("architecture_edges")
+}
+
+model ArchitectureBoard {
+  id              String   @id @default(cuid())
+  bandId          String   @map("band_id")
+  name            String
+  slug            String
+  description     String?
+  viewMode        String   @default("system_overview") @map("view_mode")
+  visibleNodeIds  String[] @map("visible_node_ids")
+  visibleEdgeIds  String[] @map("visible_edge_ids")
+  layoutDirection String   @default("TB") @map("layout_direction")
+  zoom            Float    @default(1.0)
+  positionX       Float    @default(0.0) @map("position_x")
+  positionY       Float    @default(0.0) @map("position_y")
+  filterConfig    Json?    @map("filter_config")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  band Band @relation(fields: [bandId], references: [id], onDelete: Cascade)
+
+  @@unique([bandId, slug])
+  @@index([bandId])
+  @@map("architecture_boards")
+}
+
+// ─── Discussions ──────────────────────────────────────────────────────────────
+
+model Discussion {
+  id               String           @id @default(cuid())
+  bandId           String           @map("band_id")
+  repoId           String?          @map("repo_id")
+  branch           String?
+  commitSha        String?          @map("commit_sha")
+  filePath         String?          @map("file_path")
+  startLine        Int?             @map("start_line")
+  endLine          Int?             @map("end_line")
+  codeFingerprint  String?          @map("code_fingerprint") // Hash of code content for re-anchoring
+  codeContext      String?          @map("code_context") // Snippet stored for historical reference
+  anchorConfidence Float?           @map("anchor_confidence") // 0.0–1.0 confidence score
+  anchorWarning    Boolean          @default(false) @map("anchor_warning")
+  title            String
+  description      String?
+  type             DiscussionType   @default(DISCUSSION)
+  status           DiscussionStatus @default(OPEN)
+  priority         Priority         @default(MEDIUM)
+  authorId         String           @map("author_id")
+  assigneeId       String?          @map("assignee_id")
+  resolvedById     String?          @map("resolved_by_id")
+  resolvedAt       DateTime?        @map("resolved_at")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  band           Band              @relation(fields: [bandId], references: [id], onDelete: Cascade)
+  repository     GitRepository?    @relation(fields: [repoId], references: [id])
+  author         User              @relation("DiscussionAuthor", fields: [authorId], references: [id])
+  replies        DiscussionReply[]
+  concerns       Concern[]
+  suggestedEdits SuggestedEdit[]
+  decisions      Decision[]
+
+  @@index([bandId])
+  @@index([repoId])
+  @@index([authorId])
+  @@map("discussions")
+}
+
+model DiscussionReply {
+  id           String   @id @default(cuid())
+  discussionId String   @map("discussion_id")
+  authorId     String   @map("author_id")
+  content      String
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+  author     User       @relation(fields: [authorId], references: [id])
+
+  @@index([discussionId])
+  @@map("discussion_replies")
+}
+
+// ─── Concerns ─────────────────────────────────────────────────────────────────
+
+model Concern {
+  id           String        @id @default(cuid())
+  bandId       String        @map("band_id")
+  discussionId String?       @map("discussion_id")
+  title        String
+  description  String?
+  status       ConcernStatus @default(OPEN)
+  priority     Priority      @default(MEDIUM)
+  reporterId   String        @map("reporter_id")
+  assigneeId   String?       @map("assignee_id")
+  resolvedAt   DateTime?     @map("resolved_at")
+  verifiedAt   DateTime?     @map("verified_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  band       Band        @relation(fields: [bandId], references: [id], onDelete: Cascade)
+  discussion Discussion? @relation(fields: [discussionId], references: [id])
+  reporter   User        @relation("ConcernReporter", fields: [reporterId], references: [id])
+  assignee   User?       @relation("ConcernAssignee", fields: [assigneeId], references: [id])
+
+  @@index([bandId])
+  @@index([assigneeId])
+  @@map("concerns")
+}
+
+// ─── Suggested Edits ──────────────────────────────────────────────────────────
+
+model SuggestedEdit {
+  id            String              @id @default(cuid())
+  bandId        String              @map("band_id")
+  discussionId  String?             @map("discussion_id")
+  filePath      String              @map("file_path")
+  branch        String
+  commitSha     String?             @map("commit_sha")
+  startLine     Int?                @map("start_line")
+  endLine       Int?                @map("end_line")
+  originalCode  String              @map("original_code")
+  suggestedCode String              @map("suggested_code")
+  reason        String?
+  authorId      String              @map("author_id")
+  status        SuggestedEditStatus @default(PENDING)
+  reviewedById  String?             @map("reviewed_by_id")
+  reviewNote    String?             @map("review_note")
+  reviewedAt    DateTime?           @map("reviewed_at")
+  appliedCommit String?             @map("applied_commit")
+  isAiGenerated Boolean             @default(false) @map("is_ai_generated")
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+
+  band       Band        @relation(fields: [bandId], references: [id], onDelete: Cascade)
+  discussion Discussion? @relation(fields: [discussionId], references: [id])
+  author     User        @relation("SuggestedEditAuthor", fields: [authorId], references: [id])
+
+  @@index([bandId])
+  @@index([authorId])
+  @@map("suggested_edits")
+}
+
+// ─── Code Ownership ───────────────────────────────────────────────────────────
+
+model CodeOwnership {
+  id            String        @id @default(cuid())
+  bandId        String        @map("band_id")
+  path          String // file or directory path (e.g. "src/auth/", "src/auth/auth.service.ts")
+  isDirectory   Boolean       @default(false) @map("is_directory")
+  userId        String        @map("user_id")
+  ownershipType OwnershipType @default(OWNER)
+  assignedById  String?       @map("assigned_by_id")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  band Band @relation(fields: [bandId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([bandId, path, userId])
+  @@index([bandId])
+  @@index([userId])
+  @@map("code_ownerships")
+}
+
+// ─── Tasks ────────────────────────────────────────────────────────────────────
+
+model Task {
+  id                  String        @id @default(cuid())
+  bandId              String        @map("band_id")
+  title               String
+  description         String?
+  status              TaskStatus    @default(TODO)
+  priority            Priority      @default(MEDIUM)
+  deadline            DateTime?
+  creatorId           String        @map("creator_id")
+  assigneeId          String?       @map("assignee_id")
+  relatedArtifactType ArtifactType? @map("related_artifact_type")
+  relatedArtifactId   String?       @map("related_artifact_id")
+  milestoneId         String?       @map("milestone_id")
+  completedAt         DateTime?     @map("completed_at")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+
+  band      Band       @relation(fields: [bandId], references: [id], onDelete: Cascade)
+  creator   User       @relation("TaskCreator", fields: [creatorId], references: [id])
+  assignee  User?      @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  milestone Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+
+  @@index([bandId])
+  @@index([assigneeId])
+  @@index([milestoneId])
+  @@map("tasks")
+}
+
+// ─── Requirements ────────────────────────────────────────────────────────────
+
+model Requirement {
+  id                 String            @id @default(cuid())
+  identifier         String            @map("identifier") // Stable ID e.g. "FR-001"
+  bandId             String            @map("band_id")
+  prdId              String            @map("prd_id")
+  title              String
+  description        String
+  priority           Priority          @default(MEDIUM)
+  status             RequirementStatus @default(DRAFT)
+  changeState        ChangeState       @default(NEW) @map("change_state")
+  acceptanceCriteria Json?             @map("acceptance_criteria") // Array of criteria strings
+  order              Int               @default(0)
+  createdById        String            @map("created_by_id")
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+
+  band           Band            @relation(fields: [bandId], references: [id], onDelete: Cascade)
+  prd            PRD             @relation(fields: [prdId], references: [id], onDelete: Cascade)
+  createdBy      User            @relation("RequirementCreator", fields: [createdById], references: [id])
+  decisions      Decision[]
+  changeRequests ChangeRequest[]
+
+  @@unique([bandId, identifier])
+  @@index([bandId])
+  @@index([prdId])
+  @@map("requirements")
+}
+
+// ─── Decisions, Questions & Assumptions ──────────────────────────────────────
+
+model Decision {
+  id                 String         @id @default(cuid())
+  identifier         String         @map("identifier") // Stable ID e.g. "DEC-014"
+  bandId             String         @map("band_id")
+  title              String
+  rationale          String
+  status             DecisionStatus @default(PROPOSED)
+  decidedById        String         @map("decided_by_id")
+  sourceDiscussionId String?        @map("source_discussion_id")
+  requirementId      String?        @map("requirement_id")
+  architectureNodeId String?        @map("architecture_node_id")
+  decidedAt          DateTime?      @map("decided_at")
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+
+  band             Band         @relation(fields: [bandId], references: [id], onDelete: Cascade)
+  decidedBy        User         @relation("DecisionDecider", fields: [decidedById], references: [id])
+  sourceDiscussion Discussion?  @relation(fields: [sourceDiscussionId], references: [id], onDelete: SetNull)
+  requirement      Requirement? @relation(fields: [requirementId], references: [id], onDelete: SetNull)
+
+  @@unique([bandId, identifier])
+  @@index([bandId])
+  @@index([requirementId])
+  @@map("decisions")
+}
+
+model Question {
+  id                 String         @id @default(cuid())
+  bandId             String         @map("band_id")
+  title              String
+  description        String?
+  status             QuestionStatus @default(UNANSWERED)
+  authorId           String         @map("author_id")
+  resolvedDecisionId String?        @map("resolved_decision_id")
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+
+  band   Band @relation(fields: [bandId], references: [id], onDelete: Cascade)
+  author User @relation("QuestionAuthor", fields: [authorId], references: [id])
+
+  @@index([bandId])
+  @@map("questions")
+}
+
+model Assumption {
+  id          String   @id @default(cuid())
+  bandId      String   @map("band_id")
+  title       String
+  description String?
+  isValidated Boolean  @default(false) @map("is_validated")
+  authorId    String   @map("author_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  band   Band @relation(fields: [bandId], references: [id], onDelete: Cascade)
+  author User @relation("AssumptionAuthor", fields: [authorId], references: [id])
+
+  @@index([bandId])
+  @@map("assumptions")
+}
+
+// ─── Change Management ───────────────────────────────────────────────────────
+
+model ChangeRequest {
+  id                  String              @id @default(cuid())
+  identifier          String              @map("identifier") // Stable ID e.g. "CR-009"
+  bandId              String              @map("band_id")
+  source              ChangeRequestSource @default(INTERNAL)
+  title               String
+  description         String
+  status              ChangeRequestStatus @default(PENDING)
+  authorId            String              @map("author_id")
+  reviewedById        String?             @map("reviewed_by_id")
+  reviewNotes         String?             @map("review_notes")
+  targetRequirementId String?             @map("target_requirement_id")
+  impactSummary       Json?               @map("impact_summary")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+
+  band              Band         @relation(fields: [bandId], references: [id], onDelete: Cascade)
+  author            User         @relation("CRAuthor", fields: [authorId], references: [id])
+  reviewedBy        User?        @relation("CRReviewer", fields: [reviewedById], references: [id])
+  targetRequirement Requirement? @relation(fields: [targetRequirementId], references: [id], onDelete: SetNull)
+
+  @@unique([bandId, identifier])
+  @@index([bandId])
+  @@index([targetRequirementId])
+  @@map("change_requests")
+}
+
+// ─── Milestones ──────────────────────────────────────────────────────────────
+
+model Milestone {
+  id          String          @id @default(cuid())
+  bandId      String          @map("band_id")
+  title       String
+  description String?
+  targetDate  DateTime?       @map("target_date")
+  status      MilestoneStatus @default(PLANNED)
+  order       Int             @default(0)
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  band  Band   @relation(fields: [bandId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  @@index([bandId])
+  @@map("milestones")
+}
+
+// ─── Client Publication ──────────────────────────────────────────────────────
+
+model ClientPublication {
+  id                  String   @id @default(cuid())
+  bandId              String   @unique @map("band_id")
+  publicSlug          String   @unique @map("public_slug")
+  isPasswordProtected Boolean  @default(false) @map("is_password_protected")
+  passwordHash        String?  @map("password_hash")
+  currentVersionId    String?  @map("current_version_id")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  band     Band                       @relation(fields: [bandId], references: [id], onDelete: Cascade)
+  versions ClientPublicationVersion[]
+
+  @@map("client_publications")
+}
+
+model ClientPublicationVersion {
+  id            String   @id @default(cuid())
+  publicationId String   @map("publication_id")
+  versionNumber Int      @map("version_number")
+  title         String
+  summary       String?
+  snapshotData  Json     @map("snapshot_data") // Immutable published projection
+  publishedById String   @map("published_by_id")
+  publishedAt   DateTime @default(now()) @map("published_at")
+
+  publication ClientPublication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  publishedBy User              @relation("PublicationAuthor", fields: [publishedById], references: [id])
+
+  @@unique([publicationId, versionNumber])
+  @@index([publicationId])
+  @@map("client_publication_versions")
+}
+
+// ─── Chat ─────────────────────────────────────────────────────────────────────
+
+model ChatChannel {
+  id          String          @id @default(cuid())
+  bandId      String          @map("band_id")
+  name        String
+  slug        String
+  description String?
+  type        ChatChannelType @default(TEXT)
+  isDefault   Boolean         @default(false) @map("is_default")
+  order       Int             @default(0)
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  band     Band          @relation(fields: [bandId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@unique([bandId, slug])
+  @@index([bandId])
+  @@map("chat_channels")
+}
+
+model ChatMessage {
+  id             String    @id @default(cuid())
+  channelId      String    @map("channel_id")
+  authorId       String    @map("author_id")
+  content        String
+  threadParentId String?   @map("thread_parent_id")
+  editedAt       DateTime? @map("edited_at")
+  deletedAt      DateTime? @map("deleted_at") // Soft delete
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  channel       ChatChannel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  author        User          @relation(fields: [authorId], references: [id])
+  threadReplies ChatMessage[] @relation("ThreadReplies")
+  threadParent  ChatMessage?  @relation("ThreadReplies", fields: [threadParentId], references: [id])
+
+  @@index([channelId])
+  @@index([authorId])
+  @@map("chat_messages")
+}
+
+model DirectMessage {
+  id         String    @id @default(cuid())
+  senderId   String    @map("sender_id")
+  receiverId String    @map("receiver_id")
+  content    String
+  readAt     DateTime? @map("read_at")
+  deletedAt  DateTime? @map("deleted_at") // Soft delete
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  sender   User @relation("DMSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("DMReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([senderId, receiverId])
+  @@index([receiverId])
+  @@map("direct_messages")
+}
+
+// ─── Notifications & Activity ─────────────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String           @map("user_id")
+  bandId    String?          @map("band_id")
+  type      NotificationType
+  title     String
+  body      String?
+  payload   Json? // Extra data for deep-linking
+  readAt    DateTime?        @map("read_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  band Band? @relation(fields: [bandId], references: [id])
+
+  @@index([userId])
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+model Activity {
+  id                  String        @id @default(cuid())
+  bandId              String        @map("band_id")
+  userId              String        @map("user_id")
+  type                ActivityType
+  payload             Json? // Context-specific data
+  relatedArtifactType ArtifactType? @map("related_artifact_type")
+  relatedArtifactId   String?       @map("related_artifact_id")
+  createdAt           DateTime      @default(now()) @map("created_at")
+
+  band Band @relation(fields: [bandId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([bandId])
+  @@index([userId])
+  @@index([bandId, createdAt(sort: Desc)])
+  @@map("activities")
+}
+
+// ─── Project Memory ───────────────────────────────────────────────────────────
+
+model ProjectRelationship {
+  id               String           @id @default(cuid())
+  bandId           String           @map("band_id")
+  fromType         ArtifactType     @map("from_type")
+  fromId           String           @map("from_id")
+  toType           ArtifactType     @map("to_type")
+  toId             String           @map("to_id")
+  relationshipType RelationshipType @map("relationship_type")
+  metadata         Json? // Additional context
+  createdAt        DateTime         @default(now()) @map("created_at")
+
+  @@index([bandId])
+  @@index([fromType, fromId])
+  @@index([toType, toId])
+  @@map("project_relationships")
+}
+
+// ─── AI Jobs ──────────────────────────────────────────────────────────────────
+
+model AiJob {
+  id             String      @id @default(cuid())
+  type           String // 'prd_analysis' | 'architecture_generation' | 'code_explanation' | etc.
+  status         AiJobStatus @default(PENDING)
+  inputPayload   Json        @map("input_payload")
+  outputPayload  Json?       @map("output_payload")
+  errorMessage   String?     @map("error_message")
+  bullJobId      String?     @map("bull_job_id")
+  requestedById  String      @map("requested_by_id")
+  bandId         String?     @map("band_id")
+  prdId          String?     @map("prd_id")
+  architectureId String?     @map("architecture_id")
+  startedAt      DateTime?   @map("started_at")
+  completedAt    DateTime?   @map("completed_at")
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  prd          PRD?          @relation("PRDAiJobs", fields: [prdId], references: [id])
+  architecture Architecture? @relation("ArchitectureAiJobs", fields: [architectureId], references: [id])
+
+  @@index([bandId])
+  @@index([requestedById])
+  @@index([status])
+  @@map("ai_jobs")
+}
+
+// ─── GitHub Webhook Events (for idempotency) ──────────────────────────────────
+
+model WebhookEvent {
+  id           String   @id @default(cuid())
+  deliveryId   String   @unique @map("delivery_id") // GitHub X-GitHub-Delivery header
+  event        String // e.g. 'push', 'pull_request'
+  action       String? // e.g. 'opened', 'closed'
+  repoFullName String?  @map("repo_full_name")
+  processedAt  DateTime @default(now()) @map("processed_at")
+
+  @@index([deliveryId])
+  @@map("webhook_events")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum CrewStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
+enum BandMemberRole {
+  ADMIN
+  MEMBER
+  VIEWER
+  CLIENT
+}
+
+enum DiscussionType {
+  DISCUSSION
+  QUESTION
+  CONCERN
+  BUG
+  SUGGESTION
+  CHANGE_REQUEST
+  IMPORTANT_NOTE
+  CRITICAL_ISSUE
+}
+
+enum DiscussionStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ConcernStatus {
+  OPEN
+  ACKNOWLEDGED
+  IN_PROGRESS
+  RESOLVED
+  VERIFIED
+  VERIFICATION_FAILED
+}
+
+enum SuggestedEditStatus {
+  PENDING
+  ACCEPTED
+  MODIFIED
+  REJECTED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum OwnershipType {
+  OWNER
+  EDITOR
+  SUGGEST
+  VIEW
+}
+
+enum ChatChannelType {
+  TEXT
+  VOICE
+}
+
+enum PullRequestState {
+  OPEN
+  CLOSED
+  MERGED
+}
+
+enum NotificationType {
+  MENTION
+  DM
+  DISCUSSION_REPLY
+  ASSIGNMENT
+  SUGGESTED_EDIT
+  PR_REVIEW_REQUEST
+  PR_UPDATE
+  PR_APPROVED
+  PR_MERGED
+  CONCERN_ASSIGNED
+  ARCHITECTURE_WARNING
+  PERMISSION_CHANGE
+  BAND_ANNOUNCEMENT
+}
+
+enum ActivityType {
+  BAND_CREATED
+  BAND_JOINED
+  MEMBER_JOINED
+  MEMBER_LEFT
+  ROLE_CHANGED
+  PERMISSION_CHANGED
+  PRD_CREATED
+  PRD_UPDATED
+  PRD_VERSION_CREATED
+  STAGE_UPDATED
+  ARCHITECTURE_UPDATED
+  ARCHITECTURE_VERSION_CREATED
+  DISCUSSION_CREATED
+  DISCUSSION_REPLIED
+  CONCERN_CREATED
+  CONCERN_STATUS_CHANGED
+  SUGGESTED_EDIT_CREATED
+  SUGGESTED_EDIT_REVIEWED
+  COMMIT_PUSHED
+  BRANCH_CREATED
+  BRANCH_DELETED
+  PR_CREATED
+  PR_REVIEWED
+  PR_MERGED
+  PR_CLOSED
+  TASK_CREATED
+  TASK_ASSIGNED
+  TASK_COMPLETED
+}
+
+enum AiJobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum RelationshipType {
+  REQUIREMENT_TO_ARCHITECTURE
+  ARCHITECTURE_TO_CODE
+  CODE_TO_DISCUSSION
+  DISCUSSION_TO_SUGGESTED_EDIT
+  SUGGESTED_EDIT_TO_COMMIT
+  COMMIT_TO_PR
+  PR_TO_MERGE
+  CONCERN_TO_COMMIT
+  TASK_TO_ARTIFACT
+  DERIVED_FROM
+  CAUSED_BY
+  IMPLEMENTS
+  AFFECTS
+  DISCUSSES
+  CHALLENGES
+  RESOLVED_BY
+  CHANGED_BY
+  VERIFIED_BY
+}
+
+enum ArtifactType {
+  PRD
+  PRD_VERSION
+  REQUIREMENT
+  STAGE_BOARD
+  ARCHITECTURE
+  ARCHITECTURE_VERSION
+  DISCUSSION
+  CONCERN
+  SUGGESTED_EDIT
+  COMMIT
+  PULL_REQUEST
+  TASK
+  DECISION
+  QUESTION
+  ASSUMPTION
+  CHANGE_REQUEST
+  MILESTONE
+  CLIENT_PUBLICATION
+}
+
+enum RequirementStatus {
+  DRAFT
+  REVIEW_REQUIRED
+  APPROVED
+  IMPLEMENTED
+  DEPRECATED
+}
+
+enum ChangeState {
+  NEW
+  MODIFIED
+  REMOVED
+  UNCHANGED
+  AT_RISK
+  BLOCKED
+}
+
+enum DecisionStatus {
+  PROPOSED
+  ACCEPTED
+  SUPERSEDED
+  REJECTED
+}
+
+enum QuestionStatus {
+  UNANSWERED
+  ANSWERED
+  CONVERTED_TO_DECISION
+}
+
+enum ChangeRequestSource {
+  INTERNAL
+  CLIENT
+}
+
+enum ChangeRequestStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  APPLIED
+}
+
+enum MilestoneStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  DELAYED
+}

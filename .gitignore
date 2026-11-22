@@ -1,0 +1,63 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment variables — NEVER commit real secrets
+.env
+.env.local
+.env.*.local
+*.pem
+
+# Build outputs
+.next/
+dist/
+build/
+out/
+
+# Turbo
+.turbo/
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing
+coverage/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# OS
+.DS_Store
+*.swp
+*.swo
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+*.suo
+*.user
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Prisma
+backend/prisma/dev.db
+backend/prisma/dev.db-journal
+
+# Docker volumes (if any local mounts)
+.docker-data/
+.db_data/
+
+# Sentry
+.sentryclirc
+
+# ngrok Traffic Policy (contains secrets)
+*policy.yml
+*policy.yaml
+

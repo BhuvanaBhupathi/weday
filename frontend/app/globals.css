@@ -1,0 +1,167 @@
+@import "tailwindcss";
+
+:root {
+  /* Professional Dark Theme: Pure Black & Dark Greys */
+  --background: #000000;
+  --foreground: #ededed;
+  --surface: #0a0a0a;
+  --surface-raised: #121212;
+  --surface-card: #161616;
+  --border: #222222;
+  --border-subtle: #181818;
+  --border-focus: #383838;
+  --primary: #c4b5fd;
+  --primary-glow: rgba(196, 181, 253, 0.15);
+  --accent: #a78bfa;
+}
+
+:root[data-theme='light'] {
+  --background: #ffffff;
+  --foreground: #111111;
+  --surface: #f7f7f7;
+  --surface-raised: #efefef;
+  --surface-card: #e5e5e5;
+  --border: #d4d4d4;
+  --border-subtle: #e5e5e5;
+  --border-focus: #737373;
+  --primary: #7c3aed;
+  --primary-glow: rgba(124, 58, 237, 0.15);
+  --accent: #8b5cf6;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.5;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.font-sans,
+.font-inter {
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.font-inconsolata,
+.font-editor,
+.font-mono {
+  font-family: var(--font-inconsolata), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #242424;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #383838;
+}
+
+:root[data-theme='light'] ::-webkit-scrollbar-thumb {
+  background: #ddd6fe;
+}
+
+:root[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
+  background: #c4b5fd;
+}
+
+/* Glassmorphism helpers */
+.glass-panel {
+  background: rgba(10, 8, 20, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(196, 181, 253, 0.12);
+}
+
+:root[data-theme='light'] .glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(124, 58, 237, 0.15);
+  box-shadow: 0 10px 30px rgba(124, 58, 237, 0.08);
+}
+
+.glass-card {
+  background: rgba(18, 15, 36, 0.65);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(196, 181, 253, 0.08);
+}
+
+:root[data-theme='light'] .glass-card {
+  background: rgba(245, 243, 255, 0.8);
+  border: 1px solid rgba(124, 58, 237, 0.12);
+}
+
+.glow-hover:hover {
+  box-shadow: 0 0 25px var(--primary-glow);
+  border-color: rgba(196, 181, 253, 0.4);
+}
+
+:root[data-theme='light'] .glow-hover:hover {
+  box-shadow: 0 0 25px rgba(124, 58, 237, 0.25);
+  border-color: rgba(124, 58, 237, 0.4);
+}
+
+.animate-pulse-subtle {
+  animation: pulseSubtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulseSubtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Discord Style Server Pill & Icon */
+.server-pill {
+  position: absolute;
+  left: 0;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background-color: #ffffff;
+  transition: all 0.2s ease-in-out;
+}
+
+.server-icon {
+  transition: border-radius 0.2s ease, background-color 0.2s ease, transform 0.15s ease;
+}
+
+.server-icon:hover {
+  border-radius: 16px;
+  background-color: #7c3aed;
+  color: #ffffff;
+}
+
+.server-icon.active {
+  border-radius: 16px;
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  color: #ffffff;
+  box-shadow: 0 0 16px rgba(167, 139, 250, 0.4);
+}
+
+@keyframes viewFadeIn {
+  from {
+    opacity: 0.88;
+    transform: translateY(1px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: viewFadeIn 0.12s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
+}
+
+

@@ -260,3 +260,5 @@ Contributions, feedback, and feature requests are welcome!
 ## 📄 License
 
 Distributed under the MIT License. See `LICENSE` for more information.
+The daa will tacken by the user to raed a text and develop the modules as they preference to do te task and should be 
+in gentel p

@@ -6,6 +6,7 @@ import {
   Sparkles,
   ArrowRight,
   Shield,
+  ShieldCheck,
   Layers,
   Network,
   Code2,
@@ -37,6 +38,22 @@ export default function LandingPage() {
   const [isDevLoginOpen, setIsDevLoginOpen] = useState(false);
   const [devUsername, setDevUsername] = useState('weday-admin');
   const [loggingIn, setLoggingIn] = useState(false);
+
+  // GitHub Direct Authorization State
+  const [isGithubLoginOpen, setIsGithubLoginOpen] = useState(false);
+  const [githubUsername, setGithubUsername] = useState('BhuvanaBhupathi');
+  const [githubToken, setGithubToken] = useState('');
+  const [githubAuthLoading, setGithubAuthLoading] = useState(false);
+  const [githubError, setGithubError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('github_login') === 'true') {
+        setIsGithubLoginOpen(true);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const current = ROTATING_WORDS[wordIndex];
@@ -86,6 +103,26 @@ export default function LandingPage() {
       alert(`Login failed: ${err.message}`);
     } finally {
       setLoggingIn(false);
+    }
+  }
+
+  async function handleGithubDirectLogin(e: React.FormEvent) {
+    e.preventDefault();
+    if (!githubUsername.trim()) return;
+    setGithubAuthLoading(true);
+    setGithubError(null);
+    try {
+      const res: any = await api.post('/auth/github-direct', {
+        username: githubUsername.trim(),
+        token: githubToken.trim() || undefined,
+      });
+      setUser(res.user);
+      setIsGithubLoginOpen(false);
+      window.location.href = '/workspace';
+    } catch (err: any) {
+      setGithubError(err.message || 'Failed to authenticate with GitHub');
+    } finally {
+      setGithubAuthLoading(false);
     }
   }
 
@@ -179,8 +216,8 @@ export default function LandingPage() {
               workspace ({user.username})
             </Link>
           ) : (
-            <a
-              href="http://localhost:4000/api/auth/github"
+            <button
+              onClick={() => setIsGithubLoginOpen(true)}
               className={`transition-colors tracking-wide ${
                 isDark
                   ? 'text-slate-400 hover:text-white'
@@ -188,7 +225,7 @@ export default function LandingPage() {
               }`}
             >
               login
-            </a>
+            </button>
           )}
         </nav>
       </header>
@@ -247,8 +284,8 @@ export default function LandingPage() {
             </Link>
 
             {/* GitHub Login Button with GitHub Logo inside */}
-            <a
-              href="http://localhost:4000/api/auth/github"
+            <button
+              onClick={() => setIsGithubLoginOpen(true)}
               className={`px-7 py-4 rounded-full font-black tracking-wide text-sm flex items-center justify-center space-x-3 transition-all transform hover:-translate-y-0.5 border ${
                 isDark
                   ? 'bg-white text-[#030307] hover:bg-[#F5F3FF] border-white/20 shadow-[0_0_30px_rgba(196,181,253,0.25)] hover:shadow-[0_0_45px_rgba(196,181,253,0.4)]'
@@ -263,7 +300,7 @@ export default function LandingPage() {
                 />
               </svg>
               <span>Login with GitHub</span>
-            </a>
+            </button>
 
             {/* Pioneer Dev Login Button */}
             <button
@@ -583,6 +620,144 @@ export default function LandingPage() {
                 className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#8B5CF6] hover:from-[#6D28D9] hover:to-[#7C3AED] text-xs font-bold text-white shadow-lg shadow-purple-500/20 transition-all"
               >
                 {loggingIn ? 'Authenticating...' : 'Enter Workspace'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* GitHub Direct Authorization & Login Modal */}
+      {isGithubLoginOpen && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div
+            className={`w-full max-w-md p-6 rounded-2xl border shadow-2xl relative space-y-4 ${
+              isDark
+                ? 'bg-[#0A0814]/95 border-[#A78BFA]/30 text-white'
+                : 'bg-white/95 border-[#DDD6FE] text-[#09090D]'
+            }`}
+          >
+            <button
+              onClick={() => setIsGithubLoginOpen(false)}
+              className="absolute top-4 right-4 p-1 text-slate-400 hover:text-slate-200"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center space-x-2.5">
+              <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-700 flex items-center justify-center">
+                <svg className="w-5 h-5 fill-white" viewBox="0 0 24 24">
+                  <path
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                  />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">GitHub Account Authorization</h3>
+                <p className="text-xs text-zinc-400">Directly authorize and sign in with your GitHub account</p>
+              </div>
+            </div>
+
+            {/* Info Banner */}
+            <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-800/40 text-xs text-emerald-300 space-y-1">
+              <div className="flex items-center space-x-1.5 font-semibold">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Direct GitHub Authentication (No OAuth App Setup Needed)</span>
+              </div>
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
+                Connects directly with GitHub API. Fetches your verified GitHub profile, avatar, and repositories without OAuth redirect errors or 404s.
+              </p>
+            </div>
+
+            {/* Quick Select Buttons */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 block">
+                Quick Select Account
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setGithubUsername('BhuvanaBhupathi')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center space-x-1.5 transition-all border ${
+                    githubUsername === 'BhuvanaBhupathi'
+                      ? 'bg-[#C4B5FD]/20 border-[#C4B5FD] text-white shadow-sm'
+                      : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700'
+                  }`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span>BhuvanaBhupathi (Project Lead)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGithubUsername('weday-admin')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center space-x-1.5 transition-all border ${
+                    githubUsername === 'weday-admin'
+                      ? 'bg-[#C4B5FD]/20 border-[#C4B5FD] text-white shadow-sm'
+                      : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700'
+                  }`}
+                >
+                  <span>weday-admin</span>
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleGithubDirectLogin} className="space-y-3.5 pt-1">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">
+                  GitHub Username
+                </label>
+                <input
+                  type="text"
+                  value={githubUsername}
+                  onChange={(e) => setGithubUsername(e.target.value)}
+                  placeholder="e.g. BhuvanaBhupathi"
+                  required
+                  className="w-full bg-[#121212] border border-[#2a2a2a] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#C4B5FD] font-mono"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400">
+                    GitHub Personal Access Token (PAT)
+                  </label>
+                  <span className="text-[10px] text-zinc-500 font-mono">Optional</span>
+                </div>
+                <input
+                  type="password"
+                  value={githubToken}
+                  onChange={(e) => setGithubToken(e.target.value)}
+                  placeholder="ghp_xxxxxxxxxxxxxxxxxxxx (optional)"
+                  className="w-full bg-[#121212] border border-[#2a2a2a] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#C4B5FD] font-mono"
+                />
+                <p className="text-[11px] text-zinc-500 mt-1">
+                  Optional. Allows syncing private repositories and higher GitHub API rate limits.
+                </p>
+              </div>
+
+              {githubError && (
+                <div className="p-2.5 rounded-lg bg-red-950/40 border border-red-800/50 text-red-300 text-xs font-mono">
+                  {githubError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={githubAuthLoading}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#7C3AED] via-[#8B5CF6] to-[#A78BFA] hover:from-[#6D28D9] hover:to-[#8B5CF6] text-xs font-bold text-white shadow-lg shadow-purple-500/25 transition-all flex items-center justify-center space-x-2"
+              >
+                {githubAuthLoading ? (
+                  <>
+                    <span className="w-3.5 h-3.5 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                    <span>Authorizing with GitHub...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Authorize with GitHub & Enter Workspace</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </>
+                )}
               </button>
             </form>
           </div>

@@ -49,18 +49,18 @@ export class AuthService {
     try {
       const existingBands = await this.bandsService.getUserBands(user.id);
       if (existingBands.length === 0) {
-        // Find default Friday Core band or create a default band for the user
+        // Find default WEday Core band or create a default band for the user
         const demoBand = await (this.bandsService as any).prisma.band.findFirst({
-          where: { slug: 'friday-core' },
+          where: { slug: { in: ['weday-core', 'friday-core'] } },
         });
         if (demoBand) {
           const signatureColor = await this.bandsService.nextColorForBand(demoBand.id);
           await (this.bandsService as any).prisma.bandMembership.upsert({
             where: { userId_bandId: { userId: user.id, bandId: demoBand.id } },
-            create: { userId: user.id, bandId: demoBand.id, role: 'MEMBER', signatureColor },
+            create: { userId: user.id, bandId: demoBand.id, role: 'ADMIN', signatureColor },
             update: {},
           });
-          this.logger.log(`Added user ${user.username} to demo band Friday Core`);
+          this.logger.log(`Added user ${user.username} to demo band WEday Core`);
         }
       }
     } catch (bandErr: any) {
@@ -79,14 +79,89 @@ export class AuthService {
   }
 
   /**
+   * Direct GitHub login: connects directly using GitHub API data or credentials.
+   * Eliminates the need for external GitHub OAuth app setup or redirect 404s.
+   */
+  async directGithubLogin(username = 'BhuvanaBhupathi', token?: string): Promise<{ token: string; user: User }> {
+    const cleanUser = (username || 'BhuvanaBhupathi').trim();
+    let githubProfile: GitHubProfile = {
+      id: `gh-${cleanUser}`,
+      username: cleanUser,
+      displayName: cleanUser,
+      emails: [{ value: `${cleanUser}@users.noreply.github.com` }],
+      photos: [{ value: `https://github.com/${cleanUser}.png` }],
+      accessToken: token ? token.trim() : 'direct-github-access',
+    };
+
+    // If personal token provided, verify against GitHub API
+    if (token && token.trim()) {
+      try {
+        const ghRes = await fetch('https://api.github.com/user', {
+          headers: {
+            Authorization: `Bearer ${token.trim()}`,
+            'User-Agent': 'WEday-Collaborative-Workspace',
+            Accept: 'application/vnd.github.v3+json',
+          },
+        });
+        if (ghRes.ok) {
+          const ghUser: any = await ghRes.json();
+          githubProfile = {
+            id: String(ghUser.id),
+            username: ghUser.login || cleanUser,
+            displayName: ghUser.name || ghUser.login || cleanUser,
+            emails: ghUser.email
+              ? [{ value: ghUser.email }]
+              : [{ value: `${ghUser.login || cleanUser}@users.noreply.github.com` }],
+            photos: ghUser.avatar_url
+              ? [{ value: ghUser.avatar_url }]
+              : [{ value: `https://github.com/${cleanUser}.png` }],
+            accessToken: token.trim(),
+          };
+        }
+      } catch (err: any) {
+        this.logger.warn(`GitHub token verification failed: ${err.message}`);
+      }
+    } else {
+      // Fetch public profile from GitHub API
+      try {
+        const ghRes = await fetch(`https://api.github.com/users/${encodeURIComponent(cleanUser)}`, {
+          headers: {
+            'User-Agent': 'WEday-Collaborative-Workspace',
+            Accept: 'application/vnd.github.v3+json',
+          },
+        });
+        if (ghRes.ok) {
+          const ghUser: any = await ghRes.json();
+          githubProfile = {
+            id: String(ghUser.id),
+            username: ghUser.login || cleanUser,
+            displayName: ghUser.name || ghUser.login || cleanUser,
+            emails: ghUser.email
+              ? [{ value: ghUser.email }]
+              : [{ value: `${ghUser.login || cleanUser}@users.noreply.github.com` }],
+            photos: ghUser.avatar_url
+              ? [{ value: ghUser.avatar_url }]
+              : [{ value: `https://github.com/${cleanUser}.png` }],
+            accessToken: 'direct-github-access',
+          };
+        }
+      } catch (err: any) {
+        this.logger.warn(`Public GitHub fetch failed: ${err.message}`);
+      }
+    }
+
+    return this.handleGithubCallback(githubProfile);
+  }
+
+  /**
    * Dev login for local development and testing without GitHub OAuth.
    */
   async devLogin(username = 'developer'): Promise<{ token: string; user: User }> {
     const user = await this.usersService.upsertFromGitHub({
       githubId: `dev-${username}`,
       username,
-      displayName: username === 'developer' ? 'Friday Developer' : username,
-      email: `${username}@friday.local`,
+      displayName: username === 'developer' ? 'WEday Developer' : username,
+      email: `${username}@weday.local`,
       avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${username}`,
       githubToken: 'dev-token-local',
     });

@@ -1,4 +1,4 @@
-import { Controller, Get, Req, Res, UseGuards, HttpCode, Post, Body, Logger } from '@nestjs/common';
+import { Controller, Get, Req, Res, Next, UseGuards, HttpCode, Post, Body, Logger } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import type { Request, Response } from 'express';
 import type { User } from '@prisma/client';
@@ -17,14 +17,48 @@ export class AuthController {
   ) {}
 
   /**
-   * Initiates GitHub OAuth flow.
-   * Redirects user to GitHub for authorization.
+   * Initiates GitHub OAuth flow or redirects to direct GitHub authorization
+   * if OAuth app credentials are not configured.
    */
   @Public()
   @Get('github')
-  @UseGuards(AuthGuard('github'))
-  githubAuth() {
-    // Passport handles the redirect — this body is never reached
+  githubAuth(@Req() req: Request, @Res() res: Response, @Next() next: any) {
+    const clientId = this.configService.get<string>('GITHUB_CLIENT_ID');
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
+    if (!clientId || clientId.startsWith('dev_')) {
+      return res.redirect(`${frontendUrl}/?github_login=true`);
+    }
+    const guard = new (AuthGuard('github'))();
+    return guard.canActivate({
+      switchToHttp: () => ({ getRequest: () => req, getResponse: () => res, getNext: () => next }),
+    } as any);
+  }
+
+  /**
+   * Direct GitHub Login: authorizes directly using GitHub API data or personal token.
+   * Eliminates need for GitHub OAuth app or redirect 404s.
+   */
+  @Public()
+  @Post('github-direct')
+  @HttpCode(200)
+  async directGithubLogin(
+    @Body('username') customUsername: string,
+    @Body('token') customToken: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const username = (customUsername && customUsername.trim()) || 'BhuvanaBhupathi';
+    const { token, user } = await this.authService.directGithubLogin(username, customToken);
+
+    const isProd = this.configService.get<string>('NODE_ENV') === 'production';
+    res.cookie('friday_token', token, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? 'strict' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/',
+    });
+
+    return { message: `Logged in directly as GitHub user ${user.username}`, user };
   }
 
   /**
